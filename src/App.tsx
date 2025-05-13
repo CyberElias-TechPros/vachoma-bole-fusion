@@ -20,6 +20,10 @@ import ClientDashboard from "./pages/client/ClientDashboard";
 import ProfileSettings from "./pages/client/ProfileSettings";
 import FoodMenuPage from "./pages/client/FoodMenuPage";
 import FashionPortfolioPage from "./pages/client/FashionPortfolioPage";
+import FashionCollectionsPage from "./pages/client/FashionCollectionsPage";
+import FashionCustomOrdersPage from "./pages/client/FashionCustomOrdersPage";
+import FoodOrderPage from "./pages/client/FoodOrderPage";
+import FoodSpecialsPage from "./pages/client/FoodSpecialsPage";
 
 const queryClient = new QueryClient();
 
@@ -51,6 +55,10 @@ const App = () => (
           <Route path="/signup" element={<SignupPage />} />
           <Route path="/food-menu" element={<FoodMenuPage />} />
           <Route path="/fashion-portfolio" element={<FashionPortfolioPage />} />
+          <Route path="/fashion-collections" element={<FashionCollectionsPage />} />
+          <Route path="/fashion-custom-orders" element={<FashionCustomOrdersPage />} />
+          <Route path="/food-order" element={<FoodOrderPage />} />
+          <Route path="/food-specials" element={<FoodSpecialsPage />} />
           
           {/* Client authenticated pages */}
           <Route path="/client/dashboard" element={<ClientDashboard />} />

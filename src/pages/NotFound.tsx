@@ -1,5 +1,5 @@
 
-import { useLocation } from "react-router-dom";
+import { useLocation, Link } from "react-router-dom";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { AlertCircle } from "lucide-react";
@@ -27,7 +27,7 @@ const NotFound = () => {
           We couldn't find the page you're looking for. The page might have been moved, deleted, or never existed.
         </p>
         <Button asChild size="lg" className="px-8">
-          <a href="/">Return to Dashboard</a>
+          <Link to="/">Return to Dashboard</Link>
         </Button>
       </div>
     </div>
@@ -35,3 +35,4 @@ const NotFound = () => {
 };
 
 export default NotFound;
+
