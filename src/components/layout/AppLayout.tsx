@@ -29,7 +29,7 @@ import {
   LogOut, 
   Search 
 } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { Input } from "@/components/ui/input-with-icon";
 import { useToast } from "@/hooks/use-toast";
 
 type BusinessType = "fashion" | "food" | "overview";
@@ -81,7 +81,7 @@ export function AppLayout({ children }: AppLayoutProps) {
               <Input 
                 placeholder="Search..." 
                 className="h-8"
-                startIcon={<Search className="h-4 w-4 text-muted-foreground" />}
+                startIcon={<Search className="h-4 w-4" />}
               />
             </div>
           </SidebarHeader>
