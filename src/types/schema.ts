@@ -1,4 +1,3 @@
-
 // User types
 export interface User {
   id: string;
@@ -165,4 +164,33 @@ export interface IncomeCategory {
   name: string;
   businessType: "fashion" | "food" | "shared";
   description?: string;
+}
+
+export interface CustomOrderFormData {
+  name: string;
+  email: string;
+  phone: string;
+  orderType: "dress" | "top" | "skirt" | "pants" | "suit" | "other";
+  otherOrderType?: string;
+  description: string;
+  size: "xs" | "s" | "m" | "l" | "xl" | "xxl" | "custom";
+  customSize?: {
+    bust?: number;
+    waist?: number;
+    hip?: number;
+    height?: number;
+    shoulder?: number;
+  };
+  budget: number;
+  timeline: "standard" | "rush" | "flexible";
+  referenceImages: File[];
+  fabricPreferences?: string;
+  deliveryAddress: {
+    street: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    country: string;
+  };
+  additionalNotes?: string;
 }
