@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { ClientLayout } from "@/components/layout/ClientLayout";
 import { useForm } from "react-hook-form";
@@ -107,9 +106,22 @@ const FashionCustomOrdersPage = () => {
   });
   
   const handleSubmit = async (data: z.infer<typeof customOrderSchema>) => {
+    // Fix: Explicitly cast form data to match CustomOrderFormData type
     const formData: CustomOrderFormData = {
-      ...data,
+      name: data.name,
+      email: data.email,
+      phone: data.phone,
+      orderType: data.orderType,
+      otherOrderType: data.otherOrderType,
+      description: data.description,
+      size: data.size,
+      customSize: data.customSize,
+      budget: data.budget,
+      timeline: data.timeline,
       referenceImages: referenceImages,
+      fabricPreferences: data.fabricPreferences,
+      deliveryAddress: data.deliveryAddress,
+      additionalNotes: data.additionalNotes
     };
     
     const success = await submitOrder(formData);
