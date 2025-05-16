@@ -1,93 +1,161 @@
 
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { ClientLayout } from "@/components/layout/ClientLayout";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ClientLayout } from "@/components/layout/ClientLayout";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Loader2 } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+
+const loginSchema = z.object({
+  email: z.string().email({ message: "Please enter a valid email address" }),
+  password: z.string().min(6, { message: "Password must be at least 6 characters" }),
+});
+
+type LoginFormValues = z.infer<typeof loginSchema>;
 
 const LoginPage = () => {
+  const { signIn } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    
-    // Simulate login - in a real app, this would authenticate against a backend
-    setTimeout(() => {
-      setIsLoading(false);
+  const form = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  });
+
+  // Get the redirect path from location state or default to "/"
+  const from = (location.state as { from?: { pathname: string } })?.from?.pathname || "/";
+
+  const onSubmit = async (values: LoginFormValues) => {
+    try {
+      setIsLoading(true);
+      const { success, error } = await signIn(values.email, values.password);
       
-      if (email && password) {
+      if (success) {
         toast({
-          title: "Login successful",
-          description: "Welcome to your Vachoma Empire account",
+          title: "Login successful!",
+          description: "Welcome back to Vachoma Empire.",
         });
-        navigate("/client/dashboard");
+        navigate(from, { replace: true });
       } else {
-        toast({
-          title: "Login failed",
-          description: "Please enter your email and password",
-          variant: "destructive",
-        });
+        throw error;
       }
-    }, 1000);
+    } catch (error) {
+      console.error("Login error:", error);
+      let message = "Invalid email or password.";
+      
+      if (error instanceof Error) {
+        message = error.message;
+      }
+      
+      toast({
+        title: "Login failed",
+        description: message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <ClientLayout>
-      <div className="container mx-auto flex min-h-[calc(100vh-16rem)] items-center justify-center py-12">
+      <div className="container py-12 flex items-center justify-center">
         <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle>Log in to your account</CardTitle>
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl">Login</CardTitle>
             <CardDescription>
-              Enter your email and password to access your Vachoma Empire account
+              Enter your credentials to access your account
             </CardDescription>
           </CardHeader>
-          <form onSubmit={handleLogin}>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input 
-                  id="email" 
-                  type="email" 
-                  placeholder="name@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+          <CardContent>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="you@example.com"
+                          type="email"
+                          disabled={isLoading}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="password">Password</Label>
-                  <Button type="button" variant="link" className="h-auto p-0 text-xs">
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Password</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="••••••••"
+                          type="password"
+                          disabled={isLoading}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="text-right">
+                  <Link
+                    to="/forgot-password"
+                    className="text-sm text-primary hover:underline"
+                  >
                     Forgot password?
-                  </Button>
+                  </Link>
                 </div>
-                <Input 
-                  id="password" 
-                  type="password"
-                  value={password} 
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </div>
-            </CardContent>
-            <CardFooter className="flex-col space-y-4">
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Logging in..." : "Log in"}
-              </Button>
-              <div className="text-center text-sm">
-                <span className="text-muted-foreground">Don't have an account? </span>
-                <Link to="/signup" className="text-primary underline-offset-4 hover:underline">
-                  Sign up
-                </Link>
-              </div>
-            </CardFooter>
-          </form>
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Signing in...
+                    </>
+                  ) : (
+                    "Sign In"
+                  )}
+                </Button>
+              </form>
+            </Form>
+          </CardContent>
+          <CardFooter className="flex flex-col space-y-4">
+            <div className="text-center text-sm">
+              Don't have an account?{" "}
+              <Link to="/signup" className="text-primary hover:underline">
+                Create one
+              </Link>
+            </div>
+          </CardFooter>
         </Card>
       </div>
     </ClientLayout>

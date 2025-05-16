@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
 import { CustomOrderFormData } from "@/types/schema";
+import { supabase } from "@/integrations/supabase/client";
 
 export function useCustomOrder() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -25,21 +26,69 @@ export function useCustomOrder() {
     setUploadProgress(0);
     
     try {
-      // Simulate form submission with progress
+      // Start progress indicator
       const intervalId = setInterval(() => {
         setUploadProgress((prev) => {
-          const newProgress = prev + 10;
-          if (newProgress >= 100) {
-            clearInterval(intervalId);
-            return 100;
+          const newProgress = prev + 5;
+          if (newProgress >= 90) {
+            return 90; // Hold at 90% until the actual upload completes
           }
           return newProgress;
         });
-      }, 300);
+      }, 200);
       
-      // Simulate API call with delay
-      await new Promise((resolve) => setTimeout(resolve, 3000));
+      // Upload reference images if any
+      const uploadedImageUrls: string[] = [];
       
+      if (referenceImages.length > 0) {
+        for (const file of referenceImages) {
+          const filePath = `${Date.now()}-${file.name.replace(/\s+/g, '-')}`;
+          
+          const { data: uploadData, error: uploadError } = await supabase
+            .storage
+            .from('custom-order-images')
+            .upload(filePath, file);
+            
+          if (uploadError) {
+            throw uploadError;
+          }
+          
+          // Get public URL
+          const { data: { publicUrl } } = supabase
+            .storage
+            .from('custom-order-images')
+            .getPublicUrl(filePath);
+            
+          uploadedImageUrls.push(publicUrl);
+        }
+      }
+      
+      // Submit the order data to Supabase
+      const { data: orderData, error: orderError } = await supabase
+        .from('custom_order_submissions')
+        .insert({
+          name: data.name,
+          email: data.email,
+          phone: data.phone,
+          order_type: data.orderType,
+          other_order_type: data.otherOrderType,
+          description: data.description,
+          size: data.size,
+          custom_size: data.customSize || null,
+          budget: data.budget,
+          timeline: data.timeline,
+          reference_images: uploadedImageUrls,
+          fabric_preferences: data.fabricPreferences || null,
+          delivery_address: data.deliveryAddress,
+          additional_notes: data.additionalNotes || null,
+        })
+        .select();
+        
+      if (orderError) {
+        throw orderError;
+      }
+      
+      // Complete progress
       clearInterval(intervalId);
       setUploadProgress(100);
       
