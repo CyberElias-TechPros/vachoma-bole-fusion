@@ -1,87 +1,87 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 30 30% 98%;
-    --foreground: 25 40% 20%;
+    --background: 30 40% 15%; /* Dark Brown */
+    --foreground: 0 0% 100%; /* White */
 
-    --card: 30 30% 98%;
-    --card-foreground: 25 40% 20%;
+    --card: 30 35% 20%; /* Slightly lighter dark brown for card backgrounds */
+    --card-foreground: 0 0% 100%; /* White */
 
-    --popover: 30 30% 98%;
-    --popover-foreground: 25 40% 20%;
+    --popover: 30 35% 20%; /* Slightly lighter dark brown for popovers */
+    --popover-foreground: 0 0% 100%; /* White */
 
-    --primary: 25 40% 20%;
-    --primary-foreground: 30 30% 98%;
+    --primary: 45 80% 50%; /* Gold (keeping for primary actions) */
+    --primary-foreground: 30 40% 15%; /* Dark Brown */
 
-    --secondary: 30 30% 90%;
-    --secondary-foreground: 25 40% 20%;
+    --secondary: 30 30% 30%; /* Medium dark brown */
+    --secondary-foreground: 0 0% 100%; /* White */
 
-    --muted: 30 30% 90%;
-    --muted-foreground: 30 30% 60%;
+    --muted: 30 20% 40%; /* Muted dark brown */
+    --muted-foreground: 0 0% 80%; /* Light gray/off-white */
 
-    --accent: 30 30% 90%;
-    --accent-foreground: 25 40% 20%;
+    --accent: 40 60% 60%; /* Soft Gold */
+    --accent-foreground: 30 40% 15%; /* Dark Brown */
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 25 40% 20%;
+    --destructive: 0 62.8% 30.6%; /* Red (keeping for destructive actions) */
+    --destructive-foreground: 0 0% 100%; /* White */
 
-    --border: 30 30% 80%;
-    --input: 30 30% 80%;
-    --ring: 25 40% 20%;
-    
-    --sidebar-background: 30 30% 95%;
-    --sidebar-foreground: 25 40% 20%;
-    --sidebar-primary: 25 40% 20%;
-    --sidebar-primary-foreground: 30 30% 98%;
-    --sidebar-accent: 30 30% 90%;
-    --sidebar-accent-foreground: 25 40% 20%;
-    --sidebar-border: 30 30% 80%;
-    --sidebar-ring: 25 40% 20%;
+    --border: 30 20% 50%; /* Medium brown for borders */
+    --input: 30 30% 35%; /* Slightly lighter dark brown for inputs */
+    --ring: 45 80% 50%; /* Gold for focus rings */
+
+    --sidebar-background: 30 38% 18%; /* Slightly lighter dark brown for sidebar */
+    --sidebar-foreground: 0 0% 100%; /* White */
+    --sidebar-primary: 45 80% 50%; /* Gold for sidebar primary elements */
+    --sidebar-primary-foreground: 30 40% 15%; /* Dark Brown */
+    --sidebar-accent: 40 60% 60%; /* Soft Gold for sidebar accents */
+    --sidebar-accent-foreground: 30 40% 15%; /* Dark Brown */
+    --sidebar-border: 30 20% 50%; /* Medium brown for sidebar borders */
+    --sidebar-ring: 45 80% 50%; /* Gold for sidebar focus rings */
 
     --radius: 0.5rem;
   }
 
   .dark {
-    --background: 25 40% 20%;
-    --foreground: 30 30% 98%;
+    /* In dark mode, we'll keep the dark brown background and white text */
+    --background: 30 40% 15%; /* Dark Brown */
+    --foreground: 0 0% 100%; /* White */
 
-    --card: 25 40% 20%;
-    --card-foreground: 30 30% 98%;
+    --card: 30 35% 20%;
+    --card-foreground: 0 0% 100%;
 
-    --popover: 25 40% 20%;
-    --popover-foreground: 30 30% 98%;
+    --popover: 30 35% 20%;
+    --popover-foreground: 0 0% 100%;
 
-    --primary: 30 30% 98%;
-    --primary-foreground: 25 40% 20%;
+    --primary: 45 70% 60%; /* Slightly lighter gold for dark mode */
+    --primary-foreground: 30 40% 15%;
 
-    --secondary: 30 30% 90%;
-    --secondary-foreground: 30 30% 98%;
+    --secondary: 30 30% 30%;
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 30 30% 90%;
-    --muted-foreground: 30 30% 45%;
+    --muted: 30 20% 40%;
+    --muted-foreground: 0 0% 80%;
 
-    --accent: 30 30% 90%;
-    --accent-foreground: 30 30% 98%;
+    --accent: 40 50% 55%; /* Muted gold for dark mode */
+    --accent-foreground: 30 40% 15%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 25 40% 20%;
+    --destructive: 0 50% 50%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 30 30% 80%;
-    --input: 30 30% 80%;
-    --ring: 30 30% 98%;
+    --border: 30 20% 50%;
+    --input: 30 30% 35%;
+    --ring: 45 70% 60%;
 
-    --sidebar-background: 25 30% 15%;
-    --sidebar-foreground: 30 30% 98%;
-    --sidebar-primary: 30 30% 98%;
-    --sidebar-primary-foreground: 25 40% 20%;
-    --sidebar-accent: 30 30% 90%;
-    --sidebar-accent-foreground: 30 30% 98%;
-    --sidebar-border: 30 30% 80%;
-    --sidebar-ring: 30 30% 98%;
+    --sidebar-background: 30 38% 18%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 45 70% 60%;
+    --sidebar-primary-foreground: 30 40% 15%;
+    --sidebar-accent: 40 50% 55%;
+    --sidebar-accent-foreground: 30 40% 15%;
+    --sidebar-border: 30 20% 50%;
+    --sidebar-ring: 45 70% 60%;
   }
 }
 
@@ -99,7 +99,7 @@
   .card-gradient {
     @apply bg-gradient-to-br from-card to-secondary/80 backdrop-blur-sm;
   }
-  
+
   .glass {
     @apply bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl;
   }
@@ -149,19 +149,19 @@
   .animate-fade-in {
     animation: fade-in 0.3s ease-out forwards;
   }
-  
+
   .animate-scale-in {
     animation: scale-in 0.2s ease-out forwards;
   }
-  
+
   .animate-slide-in-right {
     animation: slide-in-right 0.3s ease-out forwards;
   }
-  
+
   .animate-pulse-custom {
     animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
-  
+
   .hover-scale {
     @apply transition-transform duration-200 hover:scale-105;
   }
