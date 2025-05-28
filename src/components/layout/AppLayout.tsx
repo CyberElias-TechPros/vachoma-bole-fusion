@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/input-with-icon";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/context/AuthContext";
 
 type BusinessType = "fashion" | "food" | "overview";
 
@@ -41,6 +42,7 @@ export interface AppLayoutProps {
 export function AppLayout({ children }: AppLayoutProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { profile, signOut } = useAuth();
   const [activeBusiness, setActiveBusiness] = useState<BusinessType>("overview");
 
   const switchBusiness = (business: BusinessType) => {
@@ -57,6 +59,24 @@ export function AppLayout({ children }: AppLayoutProps) {
       navigate("/fashion");
     } else if (business === "food") {
       navigate("/food");
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast({
+        title: "Logged out",
+        description: "You have been logged out successfully",
+      });
+      navigate("/");
+    } catch (error) {
+      console.error("Error signing out:", error);
+      toast({
+        title: "Error",
+        description: "Failed to sign out",
+        variant: "destructive",
+      });
     }
   };
 
@@ -165,15 +185,17 @@ export function AppLayout({ children }: AppLayoutProps) {
             <div className="flex items-center justify-between p-4">
               <div className="flex items-center gap-2">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src="/avatar.png" alt="Admin User" />
-                  <AvatarFallback>AU</AvatarFallback>
+                  <AvatarImage src={profile?.avatar_url || "/avatar.png"} alt={profile?.full_name || "User"} />
+                  <AvatarFallback>
+                    {profile?.full_name?.split(' ').map(n => n[0]).join('') || 'U'}
+                  </AvatarFallback>
                 </Avatar>
                 <div>
-                  <p className="text-sm font-medium">Admin User</p>
-                  <p className="text-xs text-muted-foreground">admin@vachomaempire.com</p>
+                  <p className="text-sm font-medium">{profile?.full_name || 'User'}</p>
+                  <p className="text-xs text-muted-foreground">{profile?.email || ''}</p>
                 </div>
               </div>
-              <Button variant="ghost" size="icon" onClick={() => toast({ title: "Logged out", description: "You have been logged out of the system" })}>
+              <Button variant="ghost" size="icon" onClick={handleSignOut}>
                 <LogOut className="h-4 w-4" />
               </Button>
             </div>
@@ -191,6 +213,18 @@ export function AppLayout({ children }: AppLayoutProps) {
                  "Bole Food Business"}
               </h1>
             </div>
+            {profile && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Welcome,</span>
+                <span className="text-sm font-medium">{profile.full_name}</span>
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={profile.avatar_url || "/avatar.png"} alt={profile.full_name || "User"} />
+                  <AvatarFallback>
+                    {profile.full_name?.split(' ').map(n => n[0]).join('') || 'U'}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
+            )}
           </div>
           <div className="container mx-auto p-4">
             {children}

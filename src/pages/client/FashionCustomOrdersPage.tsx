@@ -60,7 +60,7 @@ const customOrderSchema = z.object({
     street: z.string().min(3, { message: "Please provide street address" }),
     city: z.string().min(2, { message: "City is required" }),
     state: z.string().min(2, { message: "State is required" }),
-    zipCode: z.string().optional(),
+    zipCode: z.string().min(1, { message: "Zip code is required" }),
     country: z.string().min(2, { message: "Country is required" }),
   }),
   additionalNotes: z.string().optional(),
@@ -106,7 +106,6 @@ const FashionCustomOrdersPage = () => {
   });
   
   const handleSubmit = async (data: z.infer<typeof customOrderSchema>) => {
-    // Fix: Explicitly cast form data to match CustomOrderFormData type
     const formData: CustomOrderFormData = {
       name: data.name,
       email: data.email,
@@ -666,7 +665,7 @@ const FashionCustomOrdersPage = () => {
                       name="deliveryAddress.zipCode"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Postal/Zip Code (Optional)</FormLabel>
+                          <FormLabel>Postal/Zip Code</FormLabel>
                           <FormControl>
                             <Input placeholder="500001" {...field} />
                           </FormControl>

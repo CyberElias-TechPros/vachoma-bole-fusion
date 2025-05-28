@@ -1,201 +1,406 @@
 
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useFashionDesigns } from "@/hooks/use-fashion-designs";
+import { FashionDesignForm } from "@/components/admin/FashionDesignForm";
+import { Plus, Shirt, Palette, TrendingUp, DollarSign, Edit2, Trash2, Eye } from "lucide-react";
 import { 
-  ShoppingBag, 
-  Search, 
-  Plus, 
-  Pencil, 
-  Scissors, 
-  TrendingUp, 
-  Clock, 
-  AlertCircle 
-} from "lucide-react";
-import { useState } from "react";
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from "@/components/ui/table";
+import { supabase } from "@/integrations/supabase/client";
+import { useEffect, useState as useStateHook } from "react";
 
-export default function FashionDashboard() {
-  const [searchTerm, setSearchTerm] = useState("");
+const FashionDashboard = () => {
+  const { designs, loading: designsLoading, addDesign, updateDesign, deleteDesign } = useFashionDesigns();
+  const [showDesignForm, setShowDesignForm] = useState(false);
+  const [editingDesign, setEditingDesign] = useState<any>(null);
+  const [customOrders, setCustomOrders] = useState<any[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(true);
 
-  // Sample data - would come from real database in production
-  const inventoryItems = [
-    { id: 1, name: "Ankara Fabric", type: "Fabric", quantity: 15, unit: "yards", reorderPoint: 10 },
-    { id: 2, name: "Lace Fabric", type: "Fabric", quantity: 8, unit: "yards", reorderPoint: 10 },
-    { id: 3, name: "Gold Buttons", type: "Accessory", quantity: 120, unit: "pieces", reorderPoint: 50 },
-    { id: 4, name: "Silver Zippers", type: "Accessory", quantity: 35, unit: "pieces", reorderPoint: 20 },
-    { id: 5, name: "Embroidery Thread", type: "Thread", quantity: 42, unit: "spools", reorderPoint: 15 },
-  ];
+  useEffect(() => {
+    fetchCustomOrders();
+  }, []);
 
-  const pendingOrders = [
-    { id: "FO-1234", customer: "Ada Johnson", item: "Wedding Gown", dueDate: "2023-06-25", status: "In Progress" },
-    { id: "FO-1235", customer: "TechCorp Ltd", item: "Corporate Uniforms (25 pieces)", dueDate: "2023-07-10", status: "Pattern Making" },
-    { id: "FO-1236", customer: "Emmanuel Okon", item: "Traditional Attire", dueDate: "2023-06-18", status: "Cutting" },
-  ];
+  const fetchCustomOrders = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('custom_order_submissions')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-  // Filter inventory items based on search term
-  const filteredInventory = inventoryItems.filter(item => 
-    item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.type.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+      if (error) throw error;
+      setCustomOrders(data || []);
+    } catch (error) {
+      console.error('Error fetching custom orders:', error);
+    } finally {
+      setOrdersLoading(false);
+    }
+  };
+
+  const totalDesigns = designs.length;
+  const approvedDesigns = designs.filter(design => design.status === 'approved').length;
+  const totalCustomOrders = customOrders.length;
+  const pendingOrders = customOrders.filter(order => order.status === 'submitted').length;
+  const avgPrice = designs.length > 0 ? designs.reduce((sum, design) => sum + design.price, 0) / designs.length : 0;
+
+  const handleAddDesign = async (data: any) => {
+    await addDesign(data);
+    setShowDesignForm(false);
+  };
+
+  const handleEditDesign = async (data: any) => {
+    if (editingDesign) {
+      await updateDesign(editingDesign.id, data);
+      setEditingDesign(null);
+    }
+  };
+
+  const handleDeleteDesign = async (id: string) => {
+    if (confirm('Are you sure you want to delete this design?')) {
+      await deleteDesign(id);
+    }
+  };
+
+  const updateOrderStatus = async (orderId: string, newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from('custom_order_submissions')
+        .update({ status: newStatus, updated_at: new Date().toISOString() })
+        .eq('id', orderId);
+
+      if (error) throw error;
+      
+      setCustomOrders(prev => prev.map(order => 
+        order.id === orderId ? { ...order, status: newStatus } : order
+      ));
+    } catch (error) {
+      console.error('Error updating order status:', error);
+    }
+  };
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold tracking-tight">Fashion Design Business</h2>
-        <div className="flex items-center gap-2">
-          <Button>
-            <Plus className="mr-2 h-4 w-4" /> New Design
-          </Button>
-          <Button variant="outline">
-            <ShoppingBag className="mr-2 h-4 w-4" /> Create Order
-          </Button>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold">Fashion Design Dashboard</h1>
+          <p className="text-muted-foreground">Manage your fashion designs, custom orders, and portfolio</p>
         </div>
+        <Button onClick={() => setShowDesignForm(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          Add Design
+        </Button>
       </div>
-      
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Monthly Revenue</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Designs</CardTitle>
+            <Shirt className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalDesigns}</div>
+            <p className="text-xs text-muted-foreground">
+              {approvedDesigns} approved
+            </p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Custom Orders</CardTitle>
+            <Palette className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{pendingOrders}</div>
+            <p className="text-xs text-muted-foreground">
+              of {totalCustomOrders} total orders
+            </p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Average Price</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">₦{Math.round(avgPrice).toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">
+              Per design
+            </p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Portfolio Views</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₦428,500</div>
+            <div className="text-2xl font-bold">1,234</div>
             <p className="text-xs text-muted-foreground">
-              +12% from last month
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Orders</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">8</div>
-            <p className="text-xs text-muted-foreground">
-              3 due this week
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Low Inventory Items</CardTitle>
-            <AlertCircle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">3</div>
-            <p className="text-xs text-muted-foreground">
-              Need reordering soon
+              This month
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Inventory Management Section */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xl font-bold">Inventory Management</h3>
-          <div className="flex gap-2">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Search inventory..."
-                className="pl-8 w-[250px]"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <Button variant="outline">
-              <Plus className="mr-2 h-4 w-4" /> Add Item
-            </Button>
-          </div>
-        </div>
-        
-        <div className="rounded-md border">
-          <div className="grid grid-cols-5 gap-4 p-4 font-medium border-b bg-muted/50 text-sm">
-            <div>Item Name</div>
-            <div>Type</div>
-            <div>Quantity</div>
-            <div>Status</div>
-            <div className="text-right">Actions</div>
-          </div>
-          {filteredInventory.length > 0 ? (
-            filteredInventory.map((item) => (
-              <div key={item.id} className="grid grid-cols-5 gap-4 p-4 border-b text-sm items-center">
-                <div className="font-medium">{item.name}</div>
-                <div>{item.type}</div>
-                <div>{item.quantity} {item.unit}</div>
-                <div>
-                  {item.quantity <= item.reorderPoint ? (
-                    <Badge variant="destructive" className="font-normal">Low Stock</Badge>
-                  ) : (
-                    <Badge variant="secondary" className="font-normal">In Stock</Badge>
-                  )}
+      {/* Main Content Tabs */}
+      <Tabs defaultValue="designs" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="designs">Designs</TabsTrigger>
+          <TabsTrigger value="custom-orders">Custom Orders</TabsTrigger>
+          <TabsTrigger value="collections">Collections</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="designs" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Fashion Designs</CardTitle>
+              <CardDescription>
+                Manage your fashion design portfolio
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {designsLoading ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                 </div>
-                <div className="flex justify-end gap-2">
-                  <Button variant="outline" size="sm">
-                    <Pencil className="h-4 w-4" />
-                  </Button>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Price</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {designs.map((design) => (
+                      <TableRow key={design.id}>
+                        <TableCell className="font-medium">{design.name}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {design.category.replace('-', ' ')}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>₦{design.price.toLocaleString()}</TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant={
+                              design.status === 'approved' ? 'default' :
+                              design.status === 'draft' ? 'secondary' :
+                              'outline'
+                            }
+                          >
+                            {design.status.replace('-', ' ')}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => window.open(design.design_images[0], '_blank')}
+                            >
+                              <Eye className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setEditingDesign(design)}
+                            >
+                              <Edit2 className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleDeleteDesign(design.id)}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="custom-orders" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Custom Order Requests</CardTitle>
+              <CardDescription>
+                Manage custom fashion order requests from clients
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {ordersLoading ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                 </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Client</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Budget</TableHead>
+                      <TableHead>Timeline</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {customOrders.map((order) => (
+                      <TableRow key={order.id}>
+                        <TableCell className="font-medium">
+                          <div>
+                            <div>{order.name}</div>
+                            <div className="text-xs text-muted-foreground">{order.email}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {order.order_type === 'other' && order.other_order_type 
+                              ? order.other_order_type 
+                              : order.order_type}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>₦{order.budget.toLocaleString()}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {order.timeline}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant={
+                              order.status === 'completed' ? 'default' :
+                              order.status === 'rejected' ? 'destructive' :
+                              'secondary'
+                            }
+                          >
+                            {order.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <select 
+                            value={order.status}
+                            onChange={(e) => updateOrderStatus(order.id, e.target.value)}
+                            className="text-sm border rounded px-2 py-1"
+                          >
+                            <option value="submitted">Submitted</option>
+                            <option value="reviewed">Reviewed</option>
+                            <option value="accepted">Accepted</option>
+                            <option value="in-progress">In Progress</option>
+                            <option value="completed">Completed</option>
+                            <option value="rejected">Rejected</option>
+                          </select>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="collections" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Fashion Collections</CardTitle>
+              <CardDescription>
+                Organize your designs into themed collections
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8">
+                <p className="text-muted-foreground mb-4">Collections feature coming soon</p>
+                <Button variant="outline">Create Collection</Button>
               </div>
-            ))
-          ) : (
-            <div className="p-4 text-center text-sm text-muted-foreground">No inventory items found</div>
-          )}
-        </div>
-      </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-      {/* Orders Section */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xl font-bold">Pending Orders</h3>
-          <Button variant="outline">
-            View All Orders
-          </Button>
-        </div>
-        
-        <div className="grid gap-4">
-          {pendingOrders.map((order) => (
-            <Card key={order.id}>
-              <CardContent className="p-4 flex items-center justify-between">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <h4 className="font-medium">{order.item}</h4>
-                    <Badge>{order.status}</Badge>
+        <TabsContent value="analytics" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Design Performance</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex justify-between">
+                    <span>Total Designs:</span>
+                    <span className="font-bold">{totalDesigns}</span>
                   </div>
-                  <p className="text-sm text-muted-foreground">Order #{order.id} • Customer: {order.customer}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="text-right">
-                    <p className="text-sm font-medium">Due Date</p>
-                    <p className="text-sm text-muted-foreground">{new Date(order.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                  <div className="flex justify-between">
+                    <span>Approved:</span>
+                    <span className="font-bold">{approvedDesigns}</span>
                   </div>
-                  <Button variant="outline" size="sm">
-                    <Scissors className="mr-2 h-4 w-4" /> Update Progress
-                  </Button>
+                  <div className="flex justify-between">
+                    <span>Average Price:</span>
+                    <span className="font-bold">₦{Math.round(avgPrice).toLocaleString()}</span>
+                  </div>
                 </div>
               </CardContent>
             </Card>
-          ))}
-        </div>
-      </div>
 
-      {/* Design Tools Integration Alert */}
-      <Alert className="border-2 border-dashed border-primary/50">
-        <AlertTitle className="flex items-center gap-2">
-          <Pencil className="h-4 w-4" />
-          Design Tools Integration
-        </AlertTitle>
-        <AlertDescription>
-          Connect with your design software (Clo3D, Adobe Illustrator) to streamline your workflow.
-          <Button variant="link" className="p-0 h-auto text-primary">Configure Integration</Button>
-        </AlertDescription>
-      </Alert>
+            <Card>
+              <CardHeader>
+                <CardTitle>Popular Categories</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {Array.from(new Set(designs.map(d => d.category))).slice(0, 5).map((category, index) => (
+                    <div key={category} className="flex justify-between items-center">
+                      <span className="text-sm">{index + 1}. {category.replace('-', ' ')}</span>
+                      <Badge variant="outline">
+                        {designs.filter(d => d.category === category).length}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      {/* Forms */}
+      <FashionDesignForm
+        open={showDesignForm}
+        onClose={() => setShowDesignForm(false)}
+        onSubmit={handleAddDesign}
+      />
+
+      <FashionDesignForm
+        open={!!editingDesign}
+        onClose={() => setEditingDesign(null)}
+        onSubmit={handleEditDesign}
+        initialData={editingDesign}
+        isEditing={true}
+      />
     </div>
   );
-}
+};
+
+export default FashionDashboard;
