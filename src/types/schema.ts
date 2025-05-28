@@ -1,3 +1,4 @@
+
 // User types
 export interface User {
   id: string;
@@ -186,11 +187,11 @@ export interface CustomOrderFormData {
   referenceImages: File[];
   fabricPreferences?: string;
   deliveryAddress: {
-    street: string;
-    city: string;
-    state: string;
-    zipCode: string;
-    country: string;
+    street?: string;
+    city?: string;
+    state?: string;
+    zipCode?: string;
+    country?: string;
   };
   additionalNotes?: string;
 }
