@@ -1,13 +1,16 @@
-
 import { useState, useEffect } from "react";
 import { ClientLayout } from "@/components/layout/ClientLayout";
+import { Seo } from "@/components/Seo";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Calendar, Clock, Star, Percent } from "lucide-react";
-import { Link } from "react-router-dom";
+import { useCart } from "@/context/CartContext";
+import { useToast } from "@/hooks/use-toast";
+import { formatNGN } from "@/lib/site";
+import { Calendar, Clock, Percent, ShoppingCart } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 
 interface FoodSpecial {
   id: string;
@@ -29,6 +32,9 @@ interface FoodSpecial {
 const FoodSpecialsPage = () => {
   const [specials, setSpecials] = useState<FoodSpecial[]>([]);
   const [loading, setLoading] = useState(true);
+  const { addItem } = useCart();
+  const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchSpecials();
@@ -65,12 +71,13 @@ const FoodSpecialsPage = () => {
   const getDiscountPercentage = (special: FoodSpecial) => {
     if (!special.menu_items) return null;
     const originalPrice = special.menu_items.price;
+    if (originalPrice <= 0 || special.price >= originalPrice) return null;
     const discountedPrice = special.price;
     return Math.round(((originalPrice - discountedPrice) / originalPrice) * 100);
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    return new Date(dateString).toLocaleDateString('en-GB', {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
@@ -81,15 +88,32 @@ const FoodSpecialsPage = () => {
     const now = new Date();
     const end = new Date(endDate);
     const timeDiff = end.getTime() - now.getTime();
-    
+
     if (timeDiff <= 0) return 'Expired';
-    
+
     const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
     const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    
+
     if (days > 0) return `${days} day${days > 1 ? 's' : ''} left`;
     if (hours > 0) return `${hours} hour${hours > 1 ? 's' : ''} left`;
     return 'Ending soon';
+  };
+
+  /** Add the special to the shared cart at its deal price, then open checkout. */
+  const orderSpecial = (special: FoodSpecial) => {
+    if (!isActiveSpecial(special)) return;
+    addItem(
+      {
+        id: special.menu_item_id ?? `special-${special.id}`,
+        name: `${special.name} (Deal)`,
+        price: special.price,
+        imageUrl: special.image_url,
+        notes: `Special offer valid until ${formatDate(special.end_date)}`,
+      },
+      1
+    );
+    toast({ title: "Deal added to cart", description: special.name });
+    navigate("/food-order");
   };
 
   if (loading) {
@@ -98,11 +122,11 @@ const FoodSpecialsPage = () => {
         <div className="container py-8">
           <div className="space-y-6">
             <Skeleton className="h-12 w-64" />
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
               {Array.from({ length: 6 }).map((_, i) => (
                 <Card key={i}>
                   <Skeleton className="h-48 w-full" />
-                  <CardContent className="p-4 space-y-3">
+                  <CardContent className="space-y-3 p-4">
                     <Skeleton className="h-6 w-3/4" />
                     <Skeleton className="h-4 w-full" />
                     <Skeleton className="h-4 w-1/2" />
@@ -118,27 +142,31 @@ const FoodSpecialsPage = () => {
 
   return (
     <ClientLayout>
-      <div className="container py-8">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold mb-4">Special Offers & Deals</h1>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Don't miss out on our amazing food deals and limited-time offers. 
-            Enjoy your favorite dishes at special prices!
+      <Seo
+        title="Special Offers & Deals"
+        description="Limited-time Bole deals and special offers from Vachoma Empire in Port Harcourt. Great food at special prices — order online before they end."
+        path="/food-specials"
+      />
+      <div className="container py-8 md:py-12">
+        <div className="mb-8 text-center">
+          <p className="mb-2 text-sm font-semibold uppercase tracking-widest text-primary">Bole kitchen</p>
+          <h1 className="mb-4 text-4xl font-bold tracking-tight">Special Offers &amp; Deals</h1>
+          <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
+            Don't miss out on our amazing food deals and limited-time offers.
+            Enjoy your favourite dishes at special prices!
           </p>
         </div>
 
-        {/* Active Specials */}
         {specials.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="mx-auto w-24 h-24 bg-muted rounded-full flex items-center justify-center mb-4">
+          <div className="py-12 text-center">
+            <div className="mx-auto mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-muted">
               <Percent className="h-12 w-12 text-muted-foreground" />
             </div>
-            <h3 className="text-xl font-semibold mb-2">No Active Specials</h3>
-            <p className="text-muted-foreground mb-6">
+            <h2 className="mb-2 text-xl font-semibold">No Active Specials</h2>
+            <p className="mb-6 text-muted-foreground">
               We don't have any special offers running at the moment, but check back soon for exciting deals!
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="flex flex-col justify-center gap-4 sm:flex-row">
               <Link to="/food-menu">
                 <Button>View Full Menu</Button>
               </Link>
@@ -149,42 +177,40 @@ const FoodSpecialsPage = () => {
           </div>
         ) : (
           <>
-            {/* Featured Special */}
-            {specials.filter(special => isActiveSpecial(special)).length > 0 && (
+            {specials.filter((special) => isActiveSpecial(special)).length > 0 && (
               <div className="mb-8">
-                <h2 className="text-2xl font-bold mb-4">🔥 Limited Time Offers</h2>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <h2 className="mb-4 text-2xl font-bold">Limited Time Offers</h2>
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                   {specials
-                    .filter(special => isActiveSpecial(special))
+                    .filter((special) => isActiveSpecial(special))
                     .slice(0, 2)
                     .map((special) => (
                       <Card key={special.id} className="overflow-hidden border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10">
                         <div className="relative">
                           {special.image_url ? (
-                            <img 
-                              src={special.image_url} 
+                            <img
+                              src={special.image_url}
                               alt={special.name}
-                              className="w-full h-48 object-cover"
+                              className="h-48 w-full object-cover"
+                              loading="lazy"
                             />
                           ) : (
-                            <div className="w-full h-48 bg-muted flex items-center justify-center">
+                            <div className="flex h-48 w-full items-center justify-center bg-muted">
                               <span className="text-muted-foreground">No Image</span>
                             </div>
                           )}
-                          
-                          {/* Discount Badge */}
+
                           {getDiscountPercentage(special) && (
-                            <div className="absolute top-4 left-4">
-                              <Badge className="bg-red-500 text-white text-lg px-3 py-1">
+                            <div className="absolute left-4 top-4">
+                              <Badge className="bg-red-500 px-3 py-1 text-lg text-white">
                                 {getDiscountPercentage(special)}% OFF
                               </Badge>
                             </div>
                           )}
 
-                          {/* Time Remaining */}
-                          <div className="absolute top-4 right-4">
+                          <div className="absolute right-4 top-4">
                             <Badge variant="secondary" className="bg-white/90 text-gray-900">
-                              <Clock className="h-3 w-3 mr-1" />
+                              <Clock className="mr-1 h-3 w-3" />
                               {getTimeRemaining(special.end_date)}
                             </Badge>
                           </div>
@@ -203,23 +229,19 @@ const FoodSpecialsPage = () => {
                               <div className="space-y-1">
                                 <div className="flex items-center gap-2">
                                   <span className="text-2xl font-bold text-primary">
-                                    ₦{special.price.toLocaleString()}
+                                    {formatNGN(special.price)}
                                   </span>
                                   {special.menu_items && (
                                     <span className="text-lg text-muted-foreground line-through">
-                                      ₦{special.menu_items.price.toLocaleString()}
+                                      {formatNGN(special.menu_items.price)}
                                     </span>
                                   )}
                                 </div>
                                 {special.menu_items && (
                                   <Badge variant="outline" className="text-xs">
-                                    {special.menu_items.category.replace('-', ' ')}
+                                    {special.menu_items.category.replace(/-/g, ' ')}
                                   </Badge>
                                 )}
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                                <span className="text-sm">4.7</span>
                               </div>
                             </div>
 
@@ -230,11 +252,10 @@ const FoodSpecialsPage = () => {
                               </div>
                             </div>
 
-                            <Link to="/food-order">
-                              <Button className="w-full" size="lg">
-                                Order Now
-                              </Button>
-                            </Link>
+                            <Button className="w-full" size="lg" onClick={() => orderSpecial(special)}>
+                              <ShoppingCart className="mr-2 h-4 w-4" />
+                              Add Deal &amp; Order
+                            </Button>
                           </div>
                         </CardContent>
                       </Card>
@@ -243,27 +264,26 @@ const FoodSpecialsPage = () => {
               </div>
             )}
 
-            {/* All Specials Grid */}
             <div className="mb-8">
-              <h2 className="text-2xl font-bold mb-4">All Special Offers</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <h2 className="mb-4 text-2xl font-bold">All Special Offers</h2>
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {specials.map((special) => (
-                  <Card key={special.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                  <Card key={special.id} className="overflow-hidden transition-shadow hover:shadow-lg">
                     <div className="relative">
                       {special.image_url ? (
-                        <img 
-                          src={special.image_url} 
+                        <img
+                          src={special.image_url}
                           alt={special.name}
-                          className="w-full h-40 object-cover"
+                          className="h-40 w-full object-cover"
+                          loading="lazy"
                         />
                       ) : (
-                        <div className="w-full h-40 bg-muted flex items-center justify-center">
+                        <div className="flex h-40 w-full items-center justify-center bg-muted">
                           <span className="text-muted-foreground">No Image</span>
                         </div>
                       )}
-                      
-                      {/* Status Badges */}
-                      <div className="absolute top-2 left-2 flex gap-2">
+
+                      <div className="absolute left-2 top-2 flex gap-2">
                         {getDiscountPercentage(special) && (
                           <Badge className="bg-red-500 text-white">
                             {getDiscountPercentage(special)}% OFF
@@ -278,9 +298,9 @@ const FoodSpecialsPage = () => {
                     </div>
 
                     <CardHeader className="pb-4">
-                      <CardTitle className="text-lg line-clamp-2">{special.name}</CardTitle>
+                      <CardTitle className="line-clamp-2 text-lg">{special.name}</CardTitle>
                       {special.description && (
-                        <p className="text-sm text-muted-foreground line-clamp-2">
+                        <p className="line-clamp-2 text-sm text-muted-foreground">
                           {special.description}
                         </p>
                       )}
@@ -288,55 +308,46 @@ const FoodSpecialsPage = () => {
 
                     <CardContent className="pt-0">
                       <div className="space-y-3">
-                        {/* Price */}
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <span className="text-xl font-bold text-primary">
-                              ₦{special.price.toLocaleString()}
+                              {formatNGN(special.price)}
                             </span>
                             {special.menu_items && (
                               <span className="text-sm text-muted-foreground line-through">
-                                ₦{special.menu_items.price.toLocaleString()}
+                                {formatNGN(special.menu_items.price)}
                               </span>
                             )}
                           </div>
-                          <div className="flex items-center gap-1">
-                            <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                            <span className="text-sm">4.5</span>
-                          </div>
                         </div>
 
-                        {/* Validity */}
                         <div className="text-xs text-muted-foreground">
-                          <div className="flex items-center gap-1 mb-1">
+                          <div className="mb-1 flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
-                            <span>Valid: {formatDate(special.start_date)} - {formatDate(special.end_date)}</span>
+                            <span>Valid: {formatDate(special.start_date)} – {formatDate(special.end_date)}</span>
                           </div>
                           {isActiveSpecial(special) && (
-                            <div className="flex items-center gap-1 text-red-600">
+                            <div className="flex items-center gap-1 text-red-500">
                               <Clock className="h-3 w-3" />
                               <span>{getTimeRemaining(special.end_date)}</span>
                             </div>
                           )}
                         </div>
 
-                        {/* Category */}
                         {special.menu_items && (
                           <Badge variant="outline" className="text-xs">
-                            {special.menu_items.category.replace('-', ' ')}
+                            {special.menu_items.category.replace(/-/g, ' ')}
                           </Badge>
                         )}
 
-                        {/* Action Button */}
-                        <Link to="/food-order">
-                          <Button 
-                            className="w-full" 
-                            variant={isActiveSpecial(special) ? "default" : "outline"}
-                            disabled={!isActiveSpecial(special)}
-                          >
-                            {isActiveSpecial(special) ? "Order Now" : "Coming Soon"}
-                          </Button>
-                        </Link>
+                        <Button
+                          className="w-full"
+                          variant={isActiveSpecial(special) ? "default" : "outline"}
+                          disabled={!isActiveSpecial(special)}
+                          onClick={() => orderSpecial(special)}
+                        >
+                          {isActiveSpecial(special) ? "Add Deal & Order" : "Coming Soon"}
+                        </Button>
                       </div>
                     </CardContent>
                   </Card>
@@ -346,21 +357,20 @@ const FoodSpecialsPage = () => {
           </>
         )}
 
-        {/* Newsletter Signup */}
-        <Card className="bg-primary/5 border-primary/20 mt-12">
+        <Card className="mt-12 border-primary/20 bg-primary/5">
           <CardContent className="p-8 text-center">
-            <h2 className="text-2xl font-bold mb-4">Never Miss a Deal!</h2>
-            <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
-              Subscribe to our newsletter to be the first to know about new specials, 
-              seasonal offers, and exclusive discounts.
+            <h2 className="mb-4 text-2xl font-bold">Craving something already?</h2>
+            <p className="mx-auto mb-6 max-w-2xl text-muted-foreground">
+              Deals come and go — but the full menu is always here. Order your favourites
+              for pickup or delivery anywhere in Port Harcourt.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center max-w-md mx-auto">
-              <input 
-                type="email" 
-                placeholder="Enter your email"
-                className="flex-1 px-4 py-2 rounded-md border border-input bg-background"
-              />
-              <Button>Subscribe</Button>
+            <div className="flex flex-col justify-center gap-3 sm:flex-row">
+              <Link to="/food-menu">
+                <Button size="lg">Browse Full Menu</Button>
+              </Link>
+              <Link to="/food-order">
+                <Button size="lg" variant="outline">Order Now</Button>
+              </Link>
             </div>
           </CardContent>
         </Card>

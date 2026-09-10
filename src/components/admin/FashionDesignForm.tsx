@@ -23,11 +23,31 @@ const fashionDesignSchema = z.object({
 
 type FashionDesignFormData = z.infer<typeof fashionDesignSchema>;
 
+export interface FashionDesignPayload {
+  name: string;
+  description: string;
+  category: string;
+  price: number;
+  status: string;
+  technical_specs?: string | null;
+  design_images: string[];
+}
+
+export interface FashionDesignInitialData {
+  name?: string;
+  description?: string;
+  category?: string;
+  price?: number;
+  status?: string;
+  technical_specs?: string | null;
+  design_images?: string[];
+}
+
 interface FashionDesignFormProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (data: any) => Promise<void>;
-  initialData?: any;
+  onSubmit: (data: FashionDesignPayload) => Promise<void>;
+  initialData?: FashionDesignInitialData | null;
   isEditing?: boolean;
 }
 
@@ -51,9 +71,14 @@ export function FashionDesignForm({ open, onClose, onSubmit, initialData, isEdit
     try {
       setIsSubmitting(true);
       
-      const formattedData = {
-        ...data,
-        design_images: data.design_images.split(',').map(url => url.trim()).filter(Boolean),
+      const formattedData: FashionDesignPayload = {
+        name: data.name,
+        description: data.description,
+        category: data.category,
+        price: data.price,
+        status: data.status,
+        technical_specs: data.technical_specs ?? null,
+        design_images: data.design_images.split(',').map((url) => url.trim()).filter(Boolean),
       };
 
       await onSubmit(formattedData);

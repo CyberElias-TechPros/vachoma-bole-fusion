@@ -9,17 +9,45 @@ export function useCustomOrder() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [referenceImages, setReferenceImages] = useState<File[]>([]);
 
+  const MAX_IMAGES = 5;
+  const MAX_FILE_BYTES = 5 * 1024 * 1024;
+
   const handleImageUpload = (files: FileList | null) => {
     if (!files) return;
-    
-    // Convert FileList to array and add to state
-    const newImages = Array.from(files);
-    setReferenceImages((prev) => [...prev, ...newImages]);
+
+    const incoming = Array.from(files);
+    const accepted: File[] = [];
+
+    for (const file of incoming) {
+      if (!file.type.startsWith("image/")) {
+        toast({ title: `"${file.name}" is not an image`, variant: "destructive" });
+        continue;
+      }
+      if (file.size > MAX_FILE_BYTES) {
+        toast({ title: `"${file.name}" exceeds 5MB`, variant: "destructive" });
+        continue;
+      }
+      accepted.push(file);
+    }
+
+    setReferenceImages((prev) => {
+      const room = MAX_IMAGES - prev.length;
+      if (room <= 0) {
+        toast({ title: `Maximum ${MAX_IMAGES} images`, variant: "destructive" });
+        return prev;
+      }
+      if (accepted.length > room) {
+        toast({ title: `Only ${room} more image${room === 1 ? "" : "s"} allowed`, variant: "destructive" });
+      }
+      return [...prev, ...accepted.slice(0, room)];
+    });
   };
 
   const removeImage = (index: number) => {
     setReferenceImages((prev) => prev.filter((_, i) => i !== index));
   };
+
+  const clearImages = () => setReferenceImages([]);
 
   const submitOrder = async (data: CustomOrderFormData) => {
     setIsSubmitting(true);
@@ -42,7 +70,8 @@ export function useCustomOrder() {
       
       if (referenceImages.length > 0) {
         for (const file of referenceImages) {
-          const filePath = `${Date.now()}-${file.name.replace(/\s+/g, '-')}`;
+          const safeName = file.name.replace(/[^\w.-]+/g, '-');
+          const filePath = `${Date.now()}-${safeName}`;
           
           const { data: uploadData, error: uploadError } = await supabase
             .storage
@@ -117,6 +146,7 @@ export function useCustomOrder() {
     referenceImages,
     handleImageUpload,
     removeImage,
+    clearImages,
     submitOrder,
   };
 }

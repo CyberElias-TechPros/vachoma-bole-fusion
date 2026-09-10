@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -36,7 +36,7 @@ export function useFoodOrders() {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -60,13 +60,14 @@ export function useFoodOrders() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
     fetchOrders();
-  }, []);
+  }, [fetchOrders]);
 
   const createOrder = async (orderData: {
+    customer_id?: string;
     customer_name: string;
     customer_phone?: string;
     order_type: string;
@@ -86,6 +87,7 @@ export function useFoodOrders() {
       const { data: order, error: orderError } = await supabase
         .from('food_orders')
         .insert([{
+          customer_id: orderData.customer_id ?? null,
           customer_name: orderData.customer_name,
           customer_phone: orderData.customer_phone,
           total_amount,

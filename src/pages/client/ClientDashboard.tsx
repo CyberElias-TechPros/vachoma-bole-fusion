@@ -1,6 +1,8 @@
 
 import { useState, useEffect } from "react";
 import { ClientLayout } from "@/components/layout/ClientLayout";
+import { Seo } from "@/components/Seo";
+import { formatNGN } from "@/lib/site";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,31 +30,58 @@ import {
   TableRow 
 } from "@/components/ui/table";
 
+interface CustomOrderSummary {
+  id: string;
+  order_type: string;
+  other_order_type?: string | null;
+  description?: string;
+  budget: number;
+  timeline: string;
+  status: string;
+  created_at: string;
+}
+
+interface FoodOrderSummary {
+  id: string;
+  customer_name: string;
+  order_type: string;
+  total_amount: number;
+  status: string;
+  created_at: string;
+  food_order_items?: Array<{ quantity: number }> | null;
+}
+
 const ClientDashboard = () => {
   const { profile, user } = useAuth();
-  const [customOrders, setCustomOrders] = useState<any[]>([]);
-  const [foodOrders, setFoodOrders] = useState<any[]>([]);
+  const [customOrders, setCustomOrders] = useState<CustomOrderSummary[]>([]);
+  const [foodOrders, setFoodOrders] = useState<FoodOrderSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user?.email) {
-      fetchUserOrders();
-    }
-  }, [user]);
+    const fetchUserOrders = async () => {
+      try {
+        setLoading(true);
 
-  const fetchUserOrders = async () => {
-    try {
-      setLoading(true);
-      
-      // Fetch custom fashion orders
-      const { data: customData, error: customError } = await supabase
-        .from('custom_order_submissions')
-        .select('*')
-        .eq('email', user?.email)
-        .order('created_at', { ascending: false });
+        // Fetch custom fashion orders
+        const { data: customData, error: customError } = await supabase
+          .from('custom_order_submissions')
+          .select('*')
+          .eq('email', user?.email)
+          .order('created_at', { ascending: false });
 
       if (customError) throw customError;
-      setCustomOrders(customData || []);
+      setCustomOrders(
+        (customData ?? []).map((o) => ({
+          id: o.id,
+          order_type: o.order_type,
+          other_order_type: o.other_order_type,
+          description: o.description,
+          budget: o.budget,
+          timeline: o.timeline,
+          status: o.status ?? "submitted",
+          created_at: o.created_at ?? "",
+        }))
+      );
 
       // Fetch food orders (if customer has placed any with their profile)
       const { data: foodData, error: foodError } = await supabase
@@ -67,14 +96,29 @@ const ClientDashboard = () => {
       if (foodError && foodError.code !== 'PGRST116') {
         console.error('Error fetching food orders:', foodError);
       }
-      setFoodOrders(foodData || []);
+      setFoodOrders(
+        (foodData ?? []).map((o) => ({
+          id: o.id,
+          customer_name: o.customer_name,
+          order_type: o.order_type,
+          total_amount: o.total_amount,
+          status: o.status,
+          created_at: o.created_at ?? "",
+          food_order_items: o.food_order_items,
+        }))
+      );
 
-    } catch (error) {
-      console.error('Error fetching orders:', error);
-    } finally {
-      setLoading(false);
+      } catch (error) {
+        console.error('Error fetching orders:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (user?.email) {
+      fetchUserOrders();
     }
-  };
+  }, [user]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -122,6 +166,7 @@ const ClientDashboard = () => {
 
   return (
     <ClientLayout>
+      <Seo title="My Dashboard" description="Track your Vachoma Empire fashion and food orders." path="/client/dashboard" indexable={false} />
       <div className="container py-8">
         {/* Welcome Section */}
         <div className="mb-8">
@@ -163,18 +208,15 @@ const ClientDashboard = () => {
           
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Spent</CardTitle>
+              <CardTitle className="text-sm font-medium">Food Spend</CardTitle>
               <Star className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                ₦{(
-                  customOrders.reduce((sum, order) => sum + order.budget, 0) +
-                  foodOrders.reduce((sum, order) => sum + order.total_amount, 0)
-                ).toLocaleString()}
+                {formatNGN(foodOrders.reduce((sum, order) => sum + order.total_amount, 0))}
               </div>
               <p className="text-xs text-muted-foreground">
-                All time
+                Across {foodOrders.length} food {foodOrders.length === 1 ? "order" : "orders"}
               </p>
             </CardContent>
           </Card>
@@ -201,18 +243,18 @@ const ClientDashboard = () => {
                   {[...customOrders, ...foodOrders]
                     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
                     .slice(0, 5)
-                    .map((order, index) => (
-                      <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
+                    .map((order) => (
+                      <div key={order.id} className="flex items-center justify-between p-4 border rounded-lg">
                         <div className="flex items-center gap-3">
                           {getStatusIcon(order.status)}
                           <div>
                             <p className="font-medium">
-                              {'order_type' in order ? 'Custom Fashion Order' : 'Food Order'}
+                              {'budget' in order ? 'Custom Fashion Order' : 'Food Order'}
                             </p>
                             <p className="text-sm text-muted-foreground">
-                              {'order_type' in order 
-                                ? `${order.order_type} - ₦${order.budget.toLocaleString()}`
-                                : `${order.customer_name} - ₦${order.total_amount.toLocaleString()}`
+                              {'budget' in order
+                                ? `${order.order_type} - ${formatNGN(order.budget)}`
+                                : `${order.customer_name} - ${formatNGN(order.total_amount)}`
                               }
                             </p>
                           </div>

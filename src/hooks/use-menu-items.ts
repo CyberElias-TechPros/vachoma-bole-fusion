@@ -1,9 +1,10 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import type { Json } from '@/integrations/supabase/types';
 import { useToast } from '@/hooks/use-toast';
 
-interface MenuItem {
+export interface MenuItem {
   id: string;
   name: string;
   description: string | null;
@@ -13,7 +14,7 @@ interface MenuItem {
   image_url: string | null;
   ingredients: string[] | null;
   allergens: string[] | null;
-  nutritional_info: any;
+  nutritional_info: Json | null;
   created_at: string;
   updated_at: string;
 }
@@ -24,7 +25,7 @@ export function useMenuItems() {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const fetchMenuItems = async () => {
+  const fetchMenuItems = useCallback(async () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -46,11 +47,11 @@ export function useMenuItems() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
     fetchMenuItems();
-  }, []);
+  }, [fetchMenuItems]);
 
   const addMenuItem = async (item: Omit<MenuItem, 'id' | 'created_at' | 'updated_at'>) => {
     try {

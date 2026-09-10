@@ -1,38 +1,43 @@
-
-import { useLocation, Link } from "react-router-dom";
-import { useEffect } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { AlertCircle } from "lucide-react";
+import { ClientLayout } from "@/components/layout/ClientLayout";
+import { Seo } from "@/components/Seo";
+import { Compass } from "lucide-react";
 
 const NotFound = () => {
-  const location = useLocation();
-
-  useEffect(() => {
-    console.error(
-      "404 Error: User attempted to access non-existent route:",
-      location.pathname
-    );
-  }, [location.pathname]);
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center max-w-md px-4">
-        <div className="mb-6 flex justify-center">
-          <div className="rounded-full bg-destructive/10 p-3 text-destructive">
-            <AlertCircle className="h-8 w-8" />
+    <ClientLayout>
+      <Seo
+        title="Page Not Found"
+        description="The page you are looking for does not exist."
+        path="/404"
+        indexable={false}
+      />
+      <div className="container flex min-h-[60vh] items-center justify-center py-16">
+        <div className="max-w-md px-4 text-center">
+          <div className="mb-6 flex justify-center">
+            <div className="rounded-full bg-primary/10 p-4 text-primary">
+              <Compass className="h-10 w-10" />
+            </div>
+          </div>
+          <p className="text-sm font-semibold uppercase tracking-widest text-primary">404</p>
+          <h1 className="mb-3 mt-1 text-4xl font-bold">Page not found</h1>
+          <p className="mb-8 text-lg text-muted-foreground">
+            The page you're looking for was moved, deleted, or never existed. Let's get you
+            back to something delicious — or beautifully tailored.
+          </p>
+          <div className="flex flex-col justify-center gap-3 sm:flex-row">
+            <Button asChild size="lg">
+              <Link to="/">Back to Home</Link>
+            </Button>
+            <Button asChild size="lg" variant="outline">
+              <Link to="/food-menu">View Bole Menu</Link>
+            </Button>
           </div>
         </div>
-        <h1 className="text-4xl font-bold mb-4">404 - Page Not Found</h1>
-        <p className="text-xl text-gray-600 mb-6">
-          We couldn't find the page you're looking for. The page might have been moved, deleted, or never existed.
-        </p>
-        <Button asChild size="lg" className="px-8">
-          <Link to="/">Return to Dashboard</Link>
-        </Button>
       </div>
-    </div>
+    </ClientLayout>
   );
 };
 
 export default NotFound;
-

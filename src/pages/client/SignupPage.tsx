@@ -26,6 +26,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
+import { useAuthRedirect } from "@/hooks/use-auth-redirect";
+import { Seo } from "@/components/Seo";
 
 const signupSchema = z.object({
   fullName: z.string().min(2, { message: "Full name must be at least 2 characters" }),
@@ -41,6 +43,7 @@ type SignupFormValues = z.infer<typeof signupSchema>;
 
 const SignupPage = () => {
   const { signUp } = useAuth();
+  useAuthRedirect();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
@@ -93,6 +96,7 @@ const SignupPage = () => {
 
   return (
     <ClientLayout>
+      <Seo title="Create Account" description="Create a Vachoma Empire account to order faster and track your fashion and food orders." path="/signup" indexable={false} />
       <div className="container py-12 flex items-center justify-center">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">

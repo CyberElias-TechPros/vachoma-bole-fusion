@@ -1,161 +1,192 @@
+import { Suspense, lazy, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
-import Index from "./pages/Index";
-import Dashboard from "./pages/Dashboard";
-import FashionDashboard from "./pages/FashionDashboard";
-import FoodDashboard from "./pages/FoodDashboard";
-import NotFound from "./pages/NotFound";
+
+// Route-level code splitting: each page becomes its own chunk so the initial
+// download stays small. Layouts, context and UI primitives stay in the main chunk.
+const Index = lazy(() => import("./pages/Index"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const FashionDashboard = lazy(() => import("./pages/FashionDashboard"));
+const FoodDashboard = lazy(() => import("./pages/FoodDashboard"));
+const Customers = lazy(() => import("./pages/Customers"));
+const Reports = lazy(() => import("./pages/Reports"));
+const Settings = lazy(() => import("./pages/Settings"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
 // Client-facing pages
-import HomePage from "./pages/client/HomePage";
-import AboutPage from "./pages/client/AboutPage";
-import ContactPage from "./pages/client/ContactPage";
-import LoginPage from "./pages/client/LoginPage";
-import SignupPage from "./pages/client/SignupPage";
-import ClientDashboard from "./pages/client/ClientDashboard";
-import ProfileSettings from "./pages/client/ProfileSettings";
-import FoodMenuPage from "./pages/client/FoodMenuPage";
-import FashionPortfolioPage from "./pages/client/FashionPortfolioPage";
-import FashionCollectionsPage from "./pages/client/FashionCollectionsPage";
-import FashionCustomOrdersPage from "./pages/client/FashionCustomOrdersPage";
-import FoodOrderPage from "./pages/client/FoodOrderPage";
-import FoodSpecialsPage from "./pages/client/FoodSpecialsPage";
-import Unauthorized from "./pages/client/Unauthorized";
+const HomePage = lazy(() => import("./pages/client/HomePage"));
+const AboutPage = lazy(() => import("./pages/client/AboutPage"));
+const ContactPage = lazy(() => import("./pages/client/ContactPage"));
+const LoginPage = lazy(() => import("./pages/client/LoginPage"));
+const SignupPage = lazy(() => import("./pages/client/SignupPage"));
+const ForgotPasswordPage = lazy(() => import("./pages/client/ForgotPasswordPage"));
+const ResetPasswordPage = lazy(() => import("./pages/client/ResetPasswordPage"));
+const ClientDashboard = lazy(() => import("./pages/client/ClientDashboard"));
+const ProfileSettings = lazy(() => import("./pages/client/ProfileSettings"));
+const FoodMenuPage = lazy(() => import("./pages/client/FoodMenuPage"));
+const FashionPortfolioPage = lazy(() => import("./pages/client/FashionPortfolioPage"));
+const FashionCollectionsPage = lazy(() => import("./pages/client/FashionCollectionsPage"));
+const FashionCustomOrdersPage = lazy(() => import("./pages/client/FashionCustomOrdersPage"));
+const FoodOrderPage = lazy(() => import("./pages/client/FoodOrderPage"));
+const FoodSpecialsPage = lazy(() => import("./pages/client/FoodSpecialsPage"));
+const Unauthorized = lazy(() => import("./pages/client/Unauthorized"));
 
 // Context Providers
 import { AuthProvider } from "@/context/AuthContext";
+import { CartProvider } from "@/context/CartContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+  return null;
+}
+
+function PageLoader() {
+  return (
+    <div className="flex min-h-[60vh] items-center justify-center gap-2 text-muted-foreground">
+      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      <span>Loading…</span>
+    </div>
+  );
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            {/* Admin Login page */}
-            <Route path="/admin" element={<Index />} />
-            
-            {/* Dashboard routes within the AppLayout - Protected for admin users */}
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute allowedRoles={["admin", "manager"]}>
-                  <AppLayout><Dashboard /></AppLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/fashion"
-              element={
-                <ProtectedRoute allowedRoles={["admin", "manager", "staff"]}>
-                  <AppLayout><FashionDashboard /></AppLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/food"
-              element={
-                <ProtectedRoute allowedRoles={["admin", "manager", "staff"]}>
-                  <AppLayout><FoodDashboard /></AppLayout>
-                </ProtectedRoute>
-              }
-            />
-            
-            {/* Other potential admin routes */}
-            <Route
-              path="/customers"
-              element={
-                <ProtectedRoute allowedRoles={["admin", "manager", "staff"]}>
-                  <AppLayout><div className="p-4">Customers page (To be implemented)</div></AppLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/reports"
-              element={
-                <ProtectedRoute allowedRoles={["admin", "manager"]}>
-                  <AppLayout><div className="p-4">Reports page (To be implemented)</div></AppLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/settings"
-              element={
-                <ProtectedRoute allowedRoles={["admin"]}>
-                  <AppLayout><div className="p-4">Settings page (To be implemented)</div></AppLayout>
-                </ProtectedRoute>
-              }
-            />
-            
-            {/* Client-facing public pages */}
-            <Route path="/" element={<HomePage />} />
-            <Route path="/about" element={<AboutPage />} />
-            <Route path="/contact" element={<ContactPage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/signup" element={<SignupPage />} />
-            <Route path="/food-menu" element={<FoodMenuPage />} />
-            <Route path="/fashion-portfolio" element={<FashionPortfolioPage />} />
-            <Route path="/fashion-collections" element={<FashionCollectionsPage />} />
-            <Route path="/fashion-custom-orders" element={<FashionCustomOrdersPage />} />
-            <Route path="/food-order" element={<FoodOrderPage />} />
-            <Route path="/food-specials" element={<FoodSpecialsPage />} />
-            <Route path="/unauthorized" element={<Unauthorized />} />
-            
-            {/* Client authenticated pages */}
-            <Route
-              path="/client/dashboard"
-              element={
-                <ProtectedRoute>
-                  <ClientDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/client/profile"
-              element={
-                <ProtectedRoute>
-                  <ProfileSettings />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/client/orders/:id"
-              element={
-                <ProtectedRoute>
-                  <ClientDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/client/fashion-orders"
-              element={
-                <ProtectedRoute>
-                  <ClientDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/client/food-orders"
-              element={
-                <ProtectedRoute>
-                  <ClientDashboard />
-                </ProtectedRoute>
-              }
-            />
-            
-            {/* Catch-all route for 404 errors */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
+      <CartProvider>
+        <TooltipProvider>
+          <Toaster />
+          <BrowserRouter>
+            <ScrollToTop />
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                {/* Staff entrance */}
+                <Route path="/admin" element={<Index />} />
+
+                {/* Staff dashboards */}
+                <Route
+                  path="/dashboard"
+                  element={
+                    <ProtectedRoute allowedRoles={["admin", "manager"]}>
+                      <AppLayout><Dashboard /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/fashion"
+                  element={
+                    <ProtectedRoute allowedRoles={["admin", "manager", "staff"]}>
+                      <AppLayout><FashionDashboard /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/food"
+                  element={
+                    <ProtectedRoute allowedRoles={["admin", "manager", "staff"]}>
+                      <AppLayout><FoodDashboard /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/customers"
+                  element={
+                    <ProtectedRoute allowedRoles={["admin", "manager", "staff"]}>
+                      <AppLayout><Customers /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/reports"
+                  element={
+                    <ProtectedRoute allowedRoles={["admin", "manager"]}>
+                      <AppLayout><Reports /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/settings"
+                  element={
+                    <ProtectedRoute allowedRoles={["admin", "manager", "staff"]}>
+                      <AppLayout><Settings /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Client-facing public pages */}
+                <Route path="/" element={<HomePage />} />
+                <Route path="/about" element={<AboutPage />} />
+                <Route path="/contact" element={<ContactPage />} />
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/signup" element={<SignupPage />} />
+                <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                <Route path="/reset-password" element={<ResetPasswordPage />} />
+                <Route path="/food-menu" element={<FoodMenuPage />} />
+                <Route path="/fashion-portfolio" element={<FashionPortfolioPage />} />
+                <Route path="/fashion-collections" element={<FashionCollectionsPage />} />
+                <Route path="/fashion-custom-orders" element={<FashionCustomOrdersPage />} />
+                <Route path="/food-order" element={<FoodOrderPage />} />
+                <Route path="/food-specials" element={<FoodSpecialsPage />} />
+                <Route path="/unauthorized" element={<Unauthorized />} />
+
+                {/* Client authenticated pages */}
+                <Route
+                  path="/client/dashboard"
+                  element={
+                    <ProtectedRoute>
+                      <ClientDashboard />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/client/profile"
+                  element={
+                    <ProtectedRoute>
+                      <ProfileSettings />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/client/orders/:id"
+                  element={
+                    <ProtectedRoute>
+                      <ClientDashboard />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/client/fashion-orders"
+                  element={
+                    <ProtectedRoute>
+                      <ClientDashboard />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/client/food-orders"
+                  element={
+                    <ProtectedRoute>
+                      <ClientDashboard />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Catch-all route for 404 errors */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
+          </BrowserRouter>
+        </TooltipProvider>
+      </CartProvider>
     </AuthProvider>
   </QueryClientProvider>
 );
