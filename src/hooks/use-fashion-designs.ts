@@ -1,9 +1,9 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
-interface FashionDesign {
+export interface FashionDesign {
   id: string;
   name: string;
   description: string;
@@ -23,7 +23,7 @@ export function useFashionDesigns() {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const fetchDesigns = async () => {
+  const fetchDesigns = useCallback(async () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -44,11 +44,11 @@ export function useFashionDesigns() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
     fetchDesigns();
-  }, []);
+  }, [fetchDesigns]);
 
   const addDesign = async (design: Omit<FashionDesign, 'id' | 'created_at' | 'updated_at'>) => {
     try {

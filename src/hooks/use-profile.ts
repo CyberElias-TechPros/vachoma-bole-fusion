@@ -1,10 +1,8 @@
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { User } from '@supabase/supabase-js';
-import { useSupabaseAuth } from './use-supabase-auth';
+import type { User } from '@supabase/supabase-js';
 
-interface Profile {
+export interface Profile {
   id: string;
   full_name: string;
   avatar_url: string | null;
@@ -15,44 +13,50 @@ interface Profile {
   updated_at: string;
 }
 
-export function useProfile() {
-  const { user } = useSupabaseAuth();
+/**
+ * Loads and manages the `profiles` row for the given auth user.
+ *
+ * The user is passed in (rather than subscribing to auth state internally)
+ * so the whole app shares exactly one Supabase auth subscription owned by
+ * `useSupabaseAuth` in the AuthProvider.
+ */
+export function useProfile(user: User | null) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<Error | null>(null);
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      if (!user) {
-        setProfile(null);
-        setLoading(false);
-        return;
+  const fetchProfile = useCallback(async () => {
+    if (!user) {
+      setProfile(null);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (error) {
+        throw error;
       }
 
-      try {
-        setLoading(true);
-        
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-
-        if (error) {
-          throw error;
-        }
-
-        setProfile(data as Profile);
-      } catch (error) {
-        console.error('Error fetching profile:', error);
-        setError(error instanceof Error ? error : new Error('Unknown error'));
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProfile();
+      setProfile(data as Profile);
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+      setError(error instanceof Error ? error : new Error('Unknown error'));
+    } finally {
+      setLoading(false);
+    }
   }, [user]);
+
+  useEffect(() => {
+    fetchProfile();
+  }, [fetchProfile]);
 
   const updateProfile = async (updates: Partial<Profile>) => {
     if (!user || !profile) {
@@ -61,7 +65,7 @@ export function useProfile() {
 
     try {
       setLoading(true);
-      
+
       const { data, error } = await supabase
         .from('profiles')
         .update(updates)
@@ -89,29 +93,34 @@ export function useProfile() {
       return { success: false, error: new Error('User not authenticated') };
     }
 
+    if (!file.type.startsWith('image/')) {
+      return { success: false, error: new Error('Please choose an image file') };
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      return { success: false, error: new Error('Image must be smaller than 2MB') };
+    }
+
     try {
       setLoading(true);
-      
-      // Create a unique file path within the user's folder
-      const filePath = `${user.id}/${Date.now()}-${file.name}`;
-      
-      // Upload the image to storage
+
+      const safeName = file.name.replace(/[^\w.-]+/g, '-');
+      const filePath = `${user.id}/${Date.now()}-${safeName}`;
+
       const { error: uploadError } = await supabase
         .storage
         .from('profile-images')
-        .upload(filePath, file);
+        .upload(filePath, file, { cacheControl: '3600', upsert: false });
 
       if (uploadError) {
         throw uploadError;
       }
 
-      // Get the public URL for the uploaded file
       const { data: { publicUrl } } = supabase
         .storage
         .from('profile-images')
         .getPublicUrl(filePath);
 
-      // Update the user's profile with the new avatar URL
       const { data, error: updateError } = await supabase
         .from('profiles')
         .update({ avatar_url: publicUrl })
@@ -140,6 +149,7 @@ export function useProfile() {
     error,
     updateProfile,
     uploadAvatar,
+    refetch: fetchProfile,
     isAdmin: profile?.role === 'admin',
     isStaff: profile?.role === 'admin' || profile?.role === 'manager' || profile?.role === 'staff',
   };

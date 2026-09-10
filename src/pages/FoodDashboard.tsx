@@ -1,49 +1,106 @@
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useMenuItems } from "@/hooks/use-menu-items";
+import type { MenuItem } from "@/hooks/use-menu-items";
 import { useFoodOrders } from "@/hooks/use-food-orders";
 import { MenuItemForm } from "@/components/admin/MenuItemForm";
+import type { MenuItemPayload } from "@/components/admin/MenuItemForm";
 import { Plus, Utensils, ShoppingCart, TrendingUp, DollarSign, Edit2, Trash2 } from "lucide-react";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from "@/components/ui/table";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { formatNGN } from "@/lib/site";
 
 const FoodDashboard = () => {
   const { menuItems, loading: menuLoading, addMenuItem, updateMenuItem, deleteMenuItem } = useMenuItems();
   const { orders, loading: ordersLoading, updateOrderStatus } = useFoodOrders();
   const [showMenuItemForm, setShowMenuItemForm] = useState(false);
-  const [editingMenuItem, setEditingMenuItem] = useState<any>(null);
+  const [editingMenuItem, setEditingMenuItem] = useState<MenuItem | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const totalMenuItems = menuItems.length;
   const availableItems = menuItems.filter(item => item.available).length;
   const totalOrders = orders.length;
-  const activeOrders = orders.filter(order => ['pending', 'preparing', 'ready-for-pickup'].includes(order.status)).length;
-  const totalRevenue = orders.reduce((sum, order) => sum + order.total_amount, 0);
+  const activeOrders = orders.filter(order => ['pending', 'preparing', 'ready-for-pickup', 'out-for-delivery'].includes(order.status)).length;
+  const billableOrders = useMemo(
+    () => orders.filter(order => order.status !== 'cancelled'),
+    [orders]
+  );
+  const totalRevenue = billableOrders.reduce((sum, order) => sum + order.total_amount, 0);
 
-  const handleAddMenuItem = async (data: any) => {
-    await addMenuItem(data);
+  const { todayRevenue, weekRevenue } = useMemo(() => {
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const startOfWeek = startOfToday - 6 * 24 * 60 * 60 * 1000;
+    let today = 0;
+    let week = 0;
+    billableOrders.forEach((order) => {
+      const t = new Date(order.created_at).getTime();
+      if (Number.isNaN(t)) return;
+      if (t >= startOfToday) today += order.total_amount;
+      if (t >= startOfWeek) week += order.total_amount;
+    });
+    return { todayRevenue: today, weekRevenue: week };
+  }, [billableOrders]);
+
+  const popularItems = useMemo(() => {
+    const counts = new Map<string, { name: string; qty: number }>();
+    orders.forEach((order) => {
+      (order.food_order_items ?? []).forEach((line) => {
+        const key = line.menu_item_id || line.menu_item_name;
+        const prev = counts.get(key) ?? { name: line.menu_item_name, qty: 0 };
+        prev.qty += line.quantity;
+        counts.set(key, prev);
+      });
+    });
+    return [...counts.values()].sort((a, b) => b.qty - a.qty).slice(0, 5);
+  }, [orders]);
+
+  const handleAddMenuItem = async (data: MenuItemPayload) => {
+    await addMenuItem({
+      ...data,
+      description: data.description ?? null,
+      image_url: data.image_url ?? null,
+      nutritional_info: null,
+    });
     setShowMenuItemForm(false);
   };
 
-  const handleEditMenuItem = async (data: any) => {
+  const handleEditMenuItem = async (data: MenuItemPayload) => {
     if (editingMenuItem) {
       await updateMenuItem(editingMenuItem.id, data);
       setEditingMenuItem(null);
     }
   };
 
-  const handleDeleteMenuItem = async (id: string) => {
-    if (confirm('Are you sure you want to delete this menu item?')) {
-      await deleteMenuItem(id);
+  const handleDeleteMenuItem = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await deleteMenuItem(deleteTarget);
+    } finally {
+      setDeleting(false);
+      setDeleteTarget(null);
     }
   };
 
@@ -180,7 +237,8 @@ const FoodDashboard = () => {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => handleDeleteMenuItem(item.id)}
+                              onClick={() => setDeleteTarget(item.id)}
+                              aria-label={`Delete ${item.name}`}
                             >
                               <Trash2 className="h-3 w-3" />
                             </Button>
@@ -245,10 +303,11 @@ const FoodDashboard = () => {
                           {new Date(order.created_at).toLocaleDateString()}
                         </TableCell>
                         <TableCell>
-                          <select 
+                          <select
                             value={order.status}
                             onChange={(e) => handleStatusUpdate(order.id, e.target.value)}
-                            className="text-sm border rounded px-2 py-1"
+                            className="rounded border border-input bg-background px-2 py-1 text-sm"
+                            aria-label={`Status for order by ${order.customer_name}`}
                           >
                             <option value="pending">Pending</option>
                             <option value="preparing">Preparing</option>
@@ -277,15 +336,15 @@ const FoodDashboard = () => {
                 <div className="space-y-4">
                   <div className="flex justify-between">
                     <span>Today's Revenue:</span>
-                    <span className="font-bold">₦0</span>
+                    <span className="font-bold">{formatNGN(todayRevenue)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>This Week:</span>
-                    <span className="font-bold">₦0</span>
+                    <span>Last 7 Days:</span>
+                    <span className="font-bold">{formatNGN(weekRevenue)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>This Month:</span>
-                    <span className="font-bold">₦{totalRevenue.toLocaleString()}</span>
+                    <span>All Time:</span>
+                    <span className="font-bold">{formatNGN(totalRevenue)}</span>
                   </div>
                 </div>
               </CardContent>
@@ -296,14 +355,20 @@ const FoodDashboard = () => {
                 <CardTitle>Popular Items</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2">
-                  {menuItems.slice(0, 5).map((item, index) => (
-                    <div key={item.id} className="flex justify-between items-center">
-                      <span className="text-sm">{index + 1}. {item.name}</span>
-                      <Badge variant="outline">₦{item.price.toLocaleString()}</Badge>
-                    </div>
-                  ))}
-                </div>
+                {popularItems.length === 0 ? (
+                  <p className="py-4 text-center text-sm text-muted-foreground">
+                    No ordered items yet — bestsellers will appear here.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {popularItems.map((item, index) => (
+                      <div key={item.name} className="flex justify-between items-center">
+                        <span className="text-sm">{index + 1}. {item.name}</span>
+                        <Badge variant="outline">×{item.qty} ordered</Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -324,6 +389,24 @@ const FoodDashboard = () => {
         initialData={editingMenuItem}
         isEditing={true}
       />
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this menu item?</AlertDialogTitle>
+            <AlertDialogDescription>
+              The item will disappear from the menu immediately. Past orders that
+              included it are kept for records. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteMenuItem} disabled={deleting}>
+              {deleting ? "Deleting…" : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

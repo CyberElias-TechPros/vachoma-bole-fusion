@@ -15,6 +15,8 @@ import { Label } from "@/components/ui/label";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { useAuthRedirect } from "@/hooks/use-auth-redirect";
+import { Seo } from "@/components/Seo";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -30,6 +32,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 const LoginPage = () => {
   const { signIn } = useAuth();
+  useAuthRedirect();
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
@@ -80,6 +83,7 @@ const LoginPage = () => {
 
   return (
     <ClientLayout>
+      <Seo title="Log In" description="Sign in to your Vachoma Empire account to track orders and manage your profile." path="/login" indexable={false} />
       <div className="container py-12 flex items-center justify-center">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">

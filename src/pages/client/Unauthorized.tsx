@@ -1,5 +1,6 @@
 
 import { ClientLayout } from "@/components/layout/ClientLayout";
+import { Seo } from "@/components/Seo";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { ShieldAlert, ArrowLeft } from "lucide-react";
@@ -8,11 +9,12 @@ import { Link } from "react-router-dom";
 const Unauthorized = () => {
   return (
     <ClientLayout>
+      <Seo title="Access Denied" description="You don't have permission to access this page." path="/unauthorized" indexable={false} />
       <div className="container py-16 flex items-center justify-center">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
-            <div className="mx-auto bg-yellow-100 p-3 rounded-full mb-4">
-              <ShieldAlert className="h-10 w-10 text-yellow-600" />
+            <div className="mx-auto bg-primary/15 p-3 rounded-full mb-4">
+              <ShieldAlert className="h-10 w-10 text-primary" />
             </div>
             <CardTitle className="text-2xl">Access Denied</CardTitle>
             <CardDescription>

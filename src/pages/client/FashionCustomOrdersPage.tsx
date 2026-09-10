@@ -1,5 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { ClientLayout } from "@/components/layout/ClientLayout";
+import { Seo } from "@/components/Seo";
+import { useAuth } from "@/context/AuthContext";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -70,26 +73,31 @@ const customOrderSchema = z.object({
 });
 
 const FashionCustomOrdersPage = () => {
-  const { 
-    isSubmitting, 
-    uploadProgress, 
-    referenceImages, 
-    handleImageUpload, 
-    removeImage, 
-    submitOrder 
+  const {
+    isSubmitting,
+    uploadProgress,
+    referenceImages,
+    handleImageUpload,
+    removeImage,
+    clearImages,
+    submitOrder
   } = useCustomOrder();
-  
+  const { profile } = useAuth();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const preselectedDesign = searchParams.get("design") ?? "";
+
   const [showCustomSize, setShowCustomSize] = useState(false);
   const [orderSubmitted, setOrderSubmitted] = useState(false);
-  
+
   const form = useForm<z.infer<typeof customOrderSchema>>({
     resolver: zodResolver(customOrderSchema),
     defaultValues: {
-      name: "",
-      email: "",
-      phone: "",
+      name: profile?.full_name ?? "",
+      email: profile?.email ?? "",
+      phone: profile?.phone ?? "",
       orderType: "dress",
-      description: "",
+      description: preselectedDesign ? `I would like a custom piece inspired by "${preselectedDesign}". ` : "",
       size: "m",
       budget: 25000,
       timeline: "standard",
@@ -104,6 +112,16 @@ const FashionCustomOrdersPage = () => {
       additionalNotes: "",
     },
   });
+
+  // If the visitor arrives from the portfolio/collections with ?design=,
+  // make sure the reference is in the description even when the form
+  // was already initialised.
+  useEffect(() => {
+    if (preselectedDesign && !form.getValues("description")) {
+      form.setValue("description", `I would like a custom piece inspired by "${preselectedDesign}". `);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preselectedDesign]);
   
   const handleSubmit = async (data: z.infer<typeof customOrderSchema>) => {
     const formData: CustomOrderFormData = {
@@ -126,6 +144,7 @@ const FashionCustomOrdersPage = () => {
     const success = await submitOrder(formData);
     if (success) {
       setOrderSubmitted(true);
+      clearImages();
       form.reset();
     }
   };
@@ -136,6 +155,12 @@ const FashionCustomOrdersPage = () => {
   if (orderSubmitted) {
     return (
       <ClientLayout>
+        <Seo
+          title="Custom Order Received"
+          description="Your custom fashion order request has been received by Vachoma Empire."
+          path="/fashion-custom-orders"
+          indexable={false}
+        />
         <div className="container py-16 text-center">
           <Card className="max-w-2xl mx-auto">
             <CardHeader>
@@ -153,7 +178,7 @@ const FashionCustomOrdersPage = () => {
               </p>
               <Alert>
                 <AlertDescription>
-                  We've sent a confirmation email to the address you provided. Please check your inbox.
+                  Keep an eye on your email and phone — we'll reach out on the contact details you provided.
                 </AlertDescription>
               </Alert>
             </CardContent>
@@ -161,7 +186,7 @@ const FashionCustomOrdersPage = () => {
               <Button variant="outline" onClick={() => setOrderSubmitted(false)}>
                 Submit Another Order
               </Button>
-              <Button onClick={() => window.location.href = "/fashion-portfolio"} className="flex items-center gap-2">
+              <Button onClick={() => navigate("/fashion-portfolio")} className="flex items-center gap-2">
                 View Our Portfolio
                 <MoveRight className="h-4 w-4" />
               </Button>
@@ -174,13 +199,27 @@ const FashionCustomOrdersPage = () => {
   
   return (
     <ClientLayout>
+      <Seo
+        title="Request a Custom Fashion Design"
+        description="Order a made-to-measure outfit from Vachoma Empire's Port Harcourt atelier — dresses, traditional attire, suits and more. Send your measurements, budget and reference photos."
+        path="/fashion-custom-orders"
+      />
       <div className="container py-8 md:py-12">
         <div className="mx-auto max-w-3xl space-y-8">
           <div>
-            <h1 className="text-3xl font-bold">Request Custom Fashion Design</h1>
+            <p className="mb-2 text-sm font-semibold uppercase tracking-widest text-primary">Fashion atelier</p>
+            <h1 className="text-3xl font-bold tracking-tight">Request Custom Fashion Design</h1>
             <p className="text-muted-foreground mt-2">
               Fill out this form to request a custom-made design from our skilled fashion team.
             </p>
+            {preselectedDesign && (
+              <Alert className="mt-4 border-primary/30 bg-primary/10">
+                <AlertDescription>
+                  Customising: <strong>{preselectedDesign}</strong> — we've referenced it in your
+                  description below. Add anything you'd like changed.
+                </AlertDescription>
+              </Alert>
+            )}
           </div>
           
           <Form {...form}>
@@ -723,7 +762,7 @@ const FashionCustomOrdersPage = () => {
                         I accept the terms and conditions
                       </FormLabel>
                       <FormDescription>
-                        By submitting this form, you agree to our <a href="#" className="text-primary underline">terms of service</a> and <a href="#" className="text-primary underline">privacy policy</a>.
+                        By submitting this form, you agree to be contacted about this order on the details you provided.
                       </FormDescription>
                       <FormMessage />
                     </div>

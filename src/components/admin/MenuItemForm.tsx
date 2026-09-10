@@ -25,11 +25,33 @@ const menuItemSchema = z.object({
 
 type MenuItemFormData = z.infer<typeof menuItemSchema>;
 
+export interface MenuItemPayload {
+  name: string;
+  description?: string;
+  category: string;
+  price: number;
+  available: boolean;
+  image_url?: string;
+  ingredients: string[] | null;
+  allergens: string[] | null;
+}
+
+export interface MenuItemInitialData {
+  name?: string;
+  description?: string | null;
+  category?: string;
+  price?: number;
+  available?: boolean | null;
+  image_url?: string | null;
+  ingredients?: string[] | null;
+  allergens?: string[] | null;
+}
+
 interface MenuItemFormProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (data: any) => Promise<void>;
-  initialData?: any;
+  onSubmit: (data: MenuItemPayload) => Promise<void>;
+  initialData?: MenuItemInitialData | null;
   isEditing?: boolean;
 }
 
@@ -54,10 +76,15 @@ export function MenuItemForm({ open, onClose, onSubmit, initialData, isEditing =
     try {
       setIsSubmitting(true);
       
-      const formattedData = {
-        ...data,
-        ingredients: data.ingredients ? data.ingredients.split(',').map(i => i.trim()).filter(Boolean) : null,
-        allergens: data.allergens ? data.allergens.split(',').map(a => a.trim()).filter(Boolean) : null,
+      const formattedData: MenuItemPayload = {
+        name: data.name,
+        description: data.description,
+        category: data.category,
+        price: data.price,
+        available: data.available,
+        image_url: data.image_url,
+        ingredients: data.ingredients ? data.ingredients.split(',').map((i) => i.trim()).filter(Boolean) : null,
+        allergens: data.allergens ? data.allergens.split(',').map((a) => a.trim()).filter(Boolean) : null,
       };
 
       await onSubmit(formattedData);

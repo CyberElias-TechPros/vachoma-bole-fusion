@@ -30,9 +30,12 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // Check role-based access if roles are specified
-  if (allowedRoles && profile?.role && !allowedRoles.includes(profile.role)) {
-    return <Navigate to="/unauthorized" replace />;
+  // Check role-based access if roles are specified. A missing profile/role
+  // must never pass a role-gated route: fail closed to /unauthorized.
+  if (allowedRoles) {
+    if (!profile?.role || !allowedRoles.includes(profile.role)) {
+      return <Navigate to="/unauthorized" replace />;
+    }
   }
 
   // Render children if authenticated and authorized
